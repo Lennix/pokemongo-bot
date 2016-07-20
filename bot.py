@@ -8,6 +8,7 @@ class Bot(object):
         self.data = Data()
         self.__scheduler = scheduler
         self.__modules = []
+        print "BOT Started"
 
     @property
     def player(self):

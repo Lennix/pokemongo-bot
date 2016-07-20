@@ -1,3 +1,5 @@
+import json
+
 from getpass import getpass
 
 from bot import Bot, RandomizedTaskScheduler
@@ -5,38 +7,68 @@ from utils.auth import PtcAuth
 from utils.rpc_client import RpcClient
 from utils.structures import Player
 from utils.pgoexceptions import AuthenticationException, RpcException
+import geopy
 from geopy.geocoders import GoogleV3
 
+
+def writeSettings(settings):
+    with open('settings.json', 'w') as outfile:
+        json.dump(settings, outfile)
+
 if __name__ == '__main__':
-    provider = raw_input('Which login provider do you want to '
+    try:
+        with open('settings.json') as file:
+            settings = json.load(file)
+    except IOError as error:
+        provider = raw_input('Which login provider do you want to '
                 'use (google/ptc)? [ptc]: ') or 'ptc'
+
+        username = raw_input('Username: ')
+        password = getpass()
+        location = raw_input('Where do you want to spawn? '
+                             '[New York, NY, USA]: ') or 'New York, NY, USA'
+        settings["username"] = username;
+        settings["password"] = password;
+        settings["location"] = location;
+        settings["provider"] = provider;
+
+    writeSettings(settings);
 
     login_type = {
         'google': None,
         'ptc': PtcAuth
-    }[provider]
-
-    username = raw_input('Username: ')
-    password = getpass()
-    location = raw_input('Where do you want to spawn? '
-                         '[New York, NY, USA]: ') or 'New York, NY, USA'
+    }[settings["provider"]]
 
     try:
-        geolocator = GoogleV3()
-        position = geolocator.geocode(location)
+        if "latitude" in settings:
+            position = geopy.point.Point(latitude = settings["latitude"], longitude = settings["longitude"])
+        else:
+            geolocator = GoogleV3()
+            position = geolocator.geocode(settings["location"])
+            settings["latitude"] = position.latitude;
+            settings["longitude"] = position.longitude;
+            writeSettings(settings);
         player = Player(position.latitude, position.longitude)
         rpc = RpcClient(player)
 
-        login_session = login_type()
-        if login_session.login(username, password):
-            if rpc.authenticate(login_session):
-                print "[RPC] Authenticated"
-                scheduler = RandomizedTaskScheduler()
-                bot = Bot(rpc, scheduler)
-            else:
-                print "[RPC] Failed to authenticate"
+        if "ticket" in settings:
+            rpc.setTicket(settings["ticket"]);
         else:
-            print "[LOGIN] Login failed, check your username and password"
+            login_session = login_type()
+            if login_session.login(settings["username"], settings["password"]):
+                if rpc.authenticate(login_session):
+                    print "[RPC] Authenticated"
+                    settings["ticket"] = rpc.getTicket();
+                    writeSettings(settings);
+                else:
+                    print "[RPC] Failed to authenticate"
+            else:
+                print "[LOGIN] Login failed, check your username and password"
+
+        if rpc.isauthenticated:
+            scheduler = RandomizedTaskScheduler()
+            bot = Bot(rpc, scheduler)
+
     except AuthenticationException as error:
         print(error)
     except RpcException as error:
