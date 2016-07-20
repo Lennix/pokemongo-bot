@@ -56,9 +56,11 @@ if __name__ == '__main__':
             ticket = AuthTicket();
             ticket.ParseFromString(base64.b64decode(settings["ticket"]))
             # Only use ticket if its still valid
-            if ticket.expire_timestamp_ms < int(round(time.time() * 1000)):
+            if ticket.expire_timestamp_ms > int(round(time.time() * 1000)):
+                print "Using saved auth_ticket with expiration %d (time left: %d)" % (ticket.expire_timestamp_ms, ticket.expire_timestamp_ms - int(round(time.time() * 1000)))
                 rpc.setTicket(ticket);
-        else:
+        
+        while not rpc.isauthenticated:
             login_session = login_type()
             if login_session.login(settings["username"], settings["password"]):
                 if rpc.authenticate(login_session):
@@ -67,6 +69,7 @@ if __name__ == '__main__':
                     writeSettings(settings);
                 else:
                     print "[RPC] Failed to authenticate"
+                    time.sleep(5)
             else:
                 print "[LOGIN] Login failed, check your username and password"
 
