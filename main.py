@@ -1,4 +1,5 @@
 import json
+import base64
 
 from getpass import getpass
 
@@ -42,24 +43,28 @@ if __name__ == '__main__':
 
     try:
         if "latitude" in settings:
-            position = geopy.point.Point(latitude = settings["latitude"], longitude = settings["longitude"])
+            position = geopy.point.Point(latitude = settings["latitude"], longitude = settings["longitude"], altitude = settings["altitude"])
         else:
             geolocator = GoogleV3()
             position = geolocator.geocode(settings["location"])
             settings["latitude"] = position.latitude;
             settings["longitude"] = position.longitude;
+            settings["altitude"] = position.altitude;
             writeSettings(settings);
-        player = Player(position.latitude, position.longitude)
+        player = Player(position.latitude, position.longitude, position.altitude)
         rpc = RpcClient(player)
 
         if "ticket" in settings:
-            rpc.setTicket(settings["ticket"]);
+            from POGOProtos.Networking.Envelopes.AuthTicket_pb2 import AuthTicket
+            ticket = AuthTicket();
+            ticket.ParseFromString(base64.b64decode(settings["ticket"]))
+            rpc.setTicket(ticket);
         else:
             login_session = login_type()
             if login_session.login(settings["username"], settings["password"]):
                 if rpc.authenticate(login_session):
                     print "[RPC] Authenticated"
-                    settings["ticket"] = rpc.getTicket();
+                    settings["ticket"] = base64.b64encode(rpc.getTicket().SerializeToString());
                     writeSettings(settings);
                 else:
                     print "[RPC] Failed to authenticate"

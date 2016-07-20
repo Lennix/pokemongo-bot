@@ -47,6 +47,12 @@ class RpcClient(object):
         else:
             return self.__call_rpc(requests)
 
+    def setTicket(self, ticket):
+        self.__api_auth_ticket = ticket;
+
+    def getTicket(self):
+        return self.__api_auth_ticket;
+
     @property
     def isauthenticated(self):
         return self.__api_auth_ticket is not None
@@ -74,7 +80,7 @@ class RpcClient(object):
         request_env = RequestEnvelope()
         request_env.request_id = self.__request_id
         request_env.status_code = 2
-        request_env.altitude = 0.0
+        request_env.altitude = self.player.alt
         request_env.latitude = self.player.lat
         request_env.longitude = self.player.lon
         request_env.unknown12 = 123
