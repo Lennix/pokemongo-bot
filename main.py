@@ -29,12 +29,8 @@ if __name__ == '__main__':
         password = getpass()
         location = raw_input('Where do you want to spawn? '
                              '[New York, NY, USA]: ') or 'New York, NY, USA'
-        settings["username"] = username;
-        settings["password"] = password;
-        settings["location"] = location;
-        settings["provider"] = provider;
-
-    writeSettings(settings);
+        settings = dict(username = username, password = password, location = location, provider = provider)
+        writeSettings(settings);
 
     login_type = {
         'google': None,
