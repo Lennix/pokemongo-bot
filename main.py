@@ -1,5 +1,6 @@
 import json
 import base64
+import time
 
 from getpass import getpass
 
@@ -54,7 +55,9 @@ if __name__ == '__main__':
             from POGOProtos.Networking.Envelopes.AuthTicket_pb2 import AuthTicket
             ticket = AuthTicket();
             ticket.ParseFromString(base64.b64decode(settings["ticket"]))
-            rpc.setTicket(ticket);
+            # Only use ticket if its still valid
+            if ticket.expire_timestamp_ms < int(round(time.time() * 1000)):
+                rpc.setTicket(ticket);
         else:
             login_session = login_type()
             if login_session.login(settings["username"], settings["password"]):
